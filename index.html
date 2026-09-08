@@ -31,13 +31,13 @@
   </main>
   <dialog id="dialog"><div class="modalHead"><span class="modalTitle" id="modalTitle">Detalhes</span><button class="close" id="closeDialog">×</button></div><div class="details" id="details"></div></dialog>
   <script>
-    let items=JSON.parse(localStorage.getItem('gringo-items')||'[]');
+    let items=JSON.parse(localStorage.getItem('gringo-items')||localStorage.getItem('gringo-items-backup')||'[]');
     const categories=['Filmes e séries','Podcasts','Livros','Música'];
     const labels={Pendente:{'Filmes e séries':'Para ver',Podcasts:'Para ouvir',Livros:'Para ler','Música':'Para ouvir'},Concluído:{'Filmes e séries':'Vistos',Podcasts:'Ouvidos',Livros:'Lidos','Música':'Ouvidos'}};
     let category='Filmes e séries',status='Pendente';
     const cats=document.querySelector('#cats'),segments=document.querySelector('#segments'),list=document.querySelector('#list'),search=document.querySelector('#search'),dialog=document.querySelector('#dialog'),details=document.querySelector('#details'),importFile=document.querySelector('#importFile');
     const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    function persist(){localStorage.setItem('gringo-items',JSON.stringify(items))}
+    function persist(){const saved=JSON.stringify(items);localStorage.setItem('gringo-items',saved);localStorage.setItem('gringo-items-backup',saved)}
     function draw(){
       cats.innerHTML=categories.map(c=>'<button class="cat '+(c===category?'active':'')+'" data-c="'+c+'">'+c+'</button>').join('');
       segments.innerHTML=['Pendente','Concluído'].map(s=>'<button class="seg '+(s===status?'active':'')+'" data-s="'+s+'">'+labels[s][category]+' ('+items.filter(i=>i.category===category&&i.status===s).length+')</button>').join('');
@@ -68,7 +68,8 @@
     function openData(){document.querySelector('#modalTitle').textContent='Dados e partilha';details.innerHTML='<div class="dataPanel"><p class="dataHelp">A lista fica apenas neste aparelho. Use estas opções para criar uma cópia ou escolher com quem deseja partilhá-la.</p><button class="dataAction" id="importAction">Importar lista</button><button class="dataAction" id="exportAction">Exportar lista</button><div class="dataDivider"></div><label class="field">Nome do perfil<input class="profileName" id="profileName" placeholder="Meu perfil Gringo"></label><button class="dataAction primary" id="shareAction">Partilhar perfil</button><p class="dataHelp">O perfil é uma página somente de leitura. Será enviado apenas depois de escolher uma pessoa ou aplicação no menu de partilha.</p></div>';document.querySelector('#profileName').value=localStorage.getItem('gringo-profile-name')||'';document.querySelector('#importAction').onclick=()=>importFile.click();document.querySelector('#exportAction').onclick=exportList;document.querySelector('#shareAction').onclick=shareProfile;dialog.showModal()}
     importFile.onchange=async()=>{const file=importFile.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());const incoming=Array.isArray(parsed)?parsed:parsed.items;if(!Array.isArray(incoming))throw new Error();items=incoming;persist();dialog.close();draw();alert('Biblioteca importada com sucesso.')}catch{alert('Este ficheiro não é uma biblioteca válida do Gringo.')}finally{importFile.value=''}};
     document.querySelector('#addButton').onclick=()=>openEditor();document.querySelector('#dataButton').onclick=openData;document.querySelector('#closeDialog').onclick=()=>dialog.close();search.oninput=draw;
-    if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js'));
+    if(items.length)persist();
+    if('serviceWorker' in navigator)window.addEventListener('load',async()=>{const registration=await navigator.serviceWorker.register('./service-worker.js');registration.update()});
     draw();
   </script>
 </body>
